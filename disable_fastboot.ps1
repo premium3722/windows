@@ -1,3 +1,8 @@
+#############################################
+Ersteller: Levin von Känel
+
+#############################################
+
 begin {
     function Test-IsElevated {
         $id = [System.Security.Principal.WindowsIdentity]::GetCurrent()
