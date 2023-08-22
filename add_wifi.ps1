@@ -1,3 +1,9 @@
+#############################################
+Ersteller: Levin von Känel
+
+#############################################
+
+
 $PSK="SUPERSICHERESPASSWORT"  #YOUR WIFI Password
 $SSID="MEINWLAN"              # Your WIFI SSID
 
