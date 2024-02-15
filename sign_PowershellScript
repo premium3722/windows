@@ -1,0 +1,4 @@
+$cert = New -SelfSignedCertificate -Subject "CN=CustomScannerCert" -Type CodeSigningCert -CertStoreLocation "Cert:\CurrentUser\My"
+Export-Certificate -Cert $cert -FilePath " $env:homepath\Documents\Scanner.cer" -Type CERT
+
+
