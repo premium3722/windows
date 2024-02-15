@@ -1,4 +1,5 @@
 $cert = New -SelfSignedCertificate -Subject "CN=CustomScannerCert" -Type CodeSigningCert -CertStoreLocation "Cert:\CurrentUser\My"
-Export-Certificate -Cert $cert -FilePath " $env:homepath\Documents\Scanner.cer" -Type CERT
-
-
+Get-ChildItem –Path Cert:\CurrentUser\My -CodeSigningCert
+pause 
+$cert = (Get-ChildItem –Path Cert:\CurrentUser\My -CodeSigningCert)[# Zahl vom Zertifikat von oben nach unten 1 ist die 0 ]
+Set-AuthenticodeSignature -FilePath "#PFAD ZUM SCRIPT" -Certificate $cert
