@@ -30,7 +30,7 @@ function func_win_updates {
     Write-Host "Importiere PSWindowsUpdate" -ForegroundColor Cyan
     Import-Module PSWindowsUpdate -ErrorAction Stop
     Write-Host "Installieren Updates..." -ForegroundColor Cyan
-    Get-WindowsUpdate -AcceptAll -Install
+    Get-WindowsUpdate -AcceptAll -Install -IgnoreReboot
     Write-Host "Fertig Windows Updates" -ForegroundColor Green
 }
 
