@@ -86,9 +86,43 @@ function func_uninstall-Office365
 	}
 }
 
+function func_download_software
+{
+	# Scope user or machine
+	$scope = 'machine'
+
+	$packages = 
+	[PSCustomObject]@
+ 	{
+    		Name  = "Adobe.Acrobat.Reader.64-bit"
+    		Scope = $scope
+	},
+	[PSCustomObject]@
+ 	{
+    		Name  = "Google.Chrome"
+    		Scope = $scope
+	}
+	$packages | % 
+ 	{
+    		if ($_.Scope) 
+      		{
+        		winget install -e --id $_.Name --scope 'machine' --silent --accept-source-agreements
+			Write-Host "Programme $_.Name wurde installiert" -ForegroundColor Green
+    		}
+    		else 
+     		{
+        		winget install -e --id $_.Name --silent --accept-source-agreements
+    		}
+	}
+ }
+
+
+Write-Host "Programme installiert" -ForegroundColor Green
 
 Write-Host "Starte Internet Check funkction"
 func_check_internet
+Write-Host "Starte Software Download"
+func_download_software
 Write-Host "Starte Windows Updates funktion"
 func_win_updates
 Write-Host "Starte Uninstall-Bloatware funktion"
