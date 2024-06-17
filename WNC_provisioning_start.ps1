@@ -92,13 +92,11 @@ function func_download_software
 	$scope = 'machine'
 
 	$packages = 
-	[PSCustomObject]@
- 	{
+	[PSCustomObject]@{
     		Name  = "Adobe.Acrobat.Reader.64-bit"
     		Scope = $scope
 	},
-	[PSCustomObject]@
- 	{
+	[PSCustomObject]@{
     		Name  = "Google.Chrome"
     		Scope = $scope
 	}
