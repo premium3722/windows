@@ -4,8 +4,6 @@ echo "# Version 0.9                       #"
 echo "# Author: Premium                   #"
 echo "#####################################"
 
-Write-Host "Winget installiert" -ForegroundColor Green
-
 # Wait for network
 function func_check_internet {
     do {
@@ -95,18 +93,16 @@ function func_download_software {
     }
 }
 
-Write-Host "Programme installiert" -ForegroundColor Green
-
 Write-Host "Starte Internet Check Funktion" -ForegroundColor Cyan
 func_check_internet
 Write-Host "Starte Software Download" -ForegroundColor Cyan
 func_download_software
-Write-Host "Starte Windows Updates Funktion" -ForegroundColor Cyan
-func_win_updates
 Write-Host "Starte Uninstall-Bloatware Funktion" -ForegroundColor Cyan
 func_uninstall_bloatware
 Write-Host "Starte Uninstall Office 365 Funktion" -ForegroundColor Cyan
 func_uninstall_Office365
+Write-Host "Starte Windows Updates Funktion" -ForegroundColor Cyan
+func_win_updates
 
 Write-Host "Ende" -ForegroundColor Green
 
