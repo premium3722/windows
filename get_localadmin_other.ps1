@@ -9,14 +9,19 @@ $adminsString = $admins -join ", "  # Administratoren mit Komma und Leerzeichen 
 $bitlockerStatus = (Get-BitLockerVolume -MountPoint "C:").ProtectionStatus
 $bitlockerStatusText = if ($bitlockerStatus -eq 1) { "Aktiviert" } else { "Deaktiviert" }
 
+# Überprüfen, ob RDP aktiviert ist
+$rdpStatus = (Get-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections').fDenyTSConnections
+$rdpStatusText = if ($rdpStatus -eq 0) { "Aktiviert" } else { "Deaktiviert" }
+
 # Abfragen von Computerinformationen
 $computerInfo = Get-ComputerInfo
 
 # Informationen zusammenstellen
-$csModel = $computerInfo.SystemType
-$csDomain = $computerInfo.Domain
+$csModel = $computerInfo.CsModel
+$csDomain = $computerInfo.CsDomain
 $biosReleaseDate = $computerInfo.BiosReleaseDate
-$windowsProductName = $computerInfo.WindowsVersion
+$biosSerialNr = $computerInfo.BiosSeralNumber
+$windowsProductName = $computerInfo.ProductName
 $windowsVersion = $computerInfo.WindowsBuildLabEx
 
 if ($admins.Count -eq 1 -and $admins -contains 'localadmin') {
@@ -27,8 +32,9 @@ if ($admins.Count -eq 1 -and $admins -contains 'localadmin') {
         title = "Administrator List"
         description = "Folgender PC hat noch andere Administratoren als der Localadmin."
         pcName = $pcName
-        adminsString = $adminsString  # Verwenden des zusammengefügten Strings
-        bitlockerStatus = $bitlockerStatusText  # BitLocker-Status hinzufügen
+        adminsString = $adminsString
+        bitlockerStatus = $bitlockerStatusText
+        rdpStatus = $rdpStatusText  
         csModel = $csModel
         csDomain = $csDomain
         biosReleaseDate = $biosReleaseDate
@@ -128,3 +134,5 @@ Write-Host "Model: " + $dataJson.csModel
 Write-Host "BitLocker Status: " + $dataJson.bitlockerStatus 
 Write-Host "Administrators: " + $dataJson.adminsString
 Write-Host "PC Name: " + $dataJson.pcName
+Write-Host "SN" + $biosSerialNr
+
