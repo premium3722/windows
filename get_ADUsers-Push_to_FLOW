@@ -1,0 +1,139 @@
+# Wenn fehler mit Sicherer Kanal kommt:
+#[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]'Tls11,Tls12'
+
+$webhookUrl = "https://prod-136.westeurope.logic.azure.com:443/ddf"
+
+
+# Überprüfen und ggf. Installation der Module
+$modules = @("ActiveDirectory")
+foreach ($module in $modules) {
+    if (-not (Get-Module -Name $module -ListAvailable)) {
+        Install-Module -Name $module -Force -AllowClobber
+    }
+}
+
+# Importieren der Module
+Import-Module ActiveDirectory
+
+function Get-ADUsers {
+    $csvData = @() # Initialisiere das Array für die CSV-Daten
+    $domain = (Get-ADDomain).NetBIOSName  # Hole den NetBIOS-Namen der Domäne
+    
+    # Filtere nur Benutzer, die nicht deaktiviert sind (userAccountControl -bitand 2)
+    $users = Get-ADUser -Filter {(Enabled -eq $true)} -Property SamAccountName, HomeDirectory, LastLogonDate, DisplayName
+    
+    foreach ($user in $users) {
+        $loginName = "$domain\$($user.SamAccountName)"  # Benutzername im Format domain\benutzername
+        $homeDrive = if ($user.HomeDirectory) { "Ja" } else { "Nein" }
+        $lastLogonDate = $user.LastLogonDate
+
+        # Konvertiere das Datum in das ISO 8601-Format, wenn es nicht null ist
+        $isoLastLogonTime = if ($lastLogonDate) { $lastLogonDate.ToString("yyyy-MM-ddTHH:mm:ssZ") } else { "Nie angemeldet" }
+
+        $csvData += [PSCustomObject]@{
+            Benutzername    = $loginName
+            Homedrive       = $homeDrive
+            LetzteAnmeldung = $isoLastLogonTime
+            Anzeigename     = $user.DisplayName
+        }
+    }
+    return $csvData
+}
+
+function Send-WebhookNotification {
+    param (
+        [string]$webhookUrl,
+        [PSCustomObject]$user
+    )
+
+    $dataJson = @{
+        title = "Benutzer Liste"
+        description = "Lokales AD Benutzer."
+        Benutzername = $user.Benutzername
+        Homedrive = $user.Homedrive
+        LetzteAnmeldung = $user.LetzteAnmeldung
+        Anzeigename = $user.Anzeigename 
+    }
+
+    $AdaptiveCard = @{
+        type = "message"
+        attachments = @(
+            @{
+
+                contentType = "application/vnd.microsoft.card.adaptive"
+                contentUrl = $null
+                content = @{
+                    "$schema" = "http://adaptivecards.io/schemas/adaptive-card.json"
+                    type = "AdaptiveCard"
+                    version = "1.0"
+                    body = @(
+                        @{
+                            type = "TextBlock"
+                            size = "Large"
+                            weight = "Bolder"
+                            text = $dataJson.title
+                        }
+                        @{
+                            type = "TextBlock"
+                            text = $dataJson.description
+                            wrap = $true
+                        }
+                        @{
+                            type = "TextBlock"
+                            text = $dataJson.Benutzername
+                            wrap = $true
+                        }
+                        @{
+                            type = "TextBlock"
+                            text = $dataJson.Homedrive
+                            wrap = $true
+                        }
+                        @{
+                            type = "TextBlock"
+                            text = $dataJson.LetzteAnmeldung
+                            wrap = $true
+                        }
+                        @{
+                            type = "TextBlock"
+                            text = $dataJson.Anzeigename
+                            wrap = $true
+                        }
+                    )
+                }
+            }
+        )
+    }
+
+    # Konvertiere das Adaptive Card-Objekt in JSON und stelle sicher, dass UTF-8 verwendet wird
+    $AdaptiveCardJson = $AdaptiveCard | ConvertTo-Json -Depth 10
+    $Utf8CardJson = [System.Text.Encoding]::UTF8.GetBytes($AdaptiveCardJson)
+
+    # Senden der Webhook-Benachrichtigung
+    Invoke-RestMethod -Method POST -Uri $webhookUrl -Body $Utf8CardJson -ContentType 'application/json; charset=utf-8'
+}
+
+function Write-HostSystemInfo {
+    param (
+        [PSCustomObject]$user
+    )
+    Write-Host "Benutzername: " + $user.Benutzername
+    Write-Host "Homedrive: " + $user.Homedrive
+    Write-Host "LetzteAnmeldung: " + $user.LetzteAnmeldung
+    Write-Host "Anzeigename: " + $user.Anzeigename
+}
+
+$users = Get-ADUsers
+Write-Host "Starte Webhook"
+foreach ($user in $users) {
+    # Prüfe, ob der Anzeigename vorhanden ist, bevor du den Webhook sendest
+    if (-not [string]::IsNullOrEmpty($user.Anzeigename)) {
+        # Schreibe die Benutzerinfo in die Konsole
+        Write-HostSystemInfo -user $user
+        # Sende eine Webhook-Benachrichtigung
+        Start-Sleep -Seconds 10
+        Send-WebhookNotification -webhookUrl $webhookUrl -user $user
+    } else {
+        Write-Host "Anzeigename ist leer, überspringe Benutzer: $($user.Benutzername)"
+    }
+}
+
