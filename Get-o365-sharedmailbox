@@ -1,0 +1,21 @@
+# Falls das Modul ExchangeOnlineManagement nicht installiert ist:
+Install-Module -Name ExchangeOnlineManagement
+
+# Verbindung zu Exchange Online herstellen
+Import-Module ExchangeOnlineManagement
+Connect-ExchangeOnline -UserPrincipalName <dein_admin_konto>@<deinedomain>.com -ShowProgress $true
+
+# Freigegebene Postfächer abrufen
+$sharedMailboxes = Get-Mailbox -RecipientTypeDetails SharedMailbox
+
+# Exportieren in eine CSV-Datei
+$sharedMailboxes | Select-Object DisplayName, PrimarySmtpAddress, Alias | Export-Csv -Path "C:\Pfad\zu\shared_mailboxes.csv" -NoTypeInformation
+
+# Ressourcenpostfächer abrufen
+$resourceMailboxes = Get-Mailbox -RecipientTypeDetails RoomMailbox, EquipmentMailbox
+
+# Exportieren in eine CSV-Datei
+$resourceMailboxes | Select-Object DisplayName, PrimarySmtpAddress, Alias | Export-Csv -Path "C:\Pfad\zu\resource_mailboxes.csv" -NoTypeInformation
+
+# Sitzung beenden
+Disconnect-ExchangeOnline -Confirm:$false
