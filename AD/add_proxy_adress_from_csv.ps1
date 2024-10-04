@@ -5,20 +5,24 @@ echo "# Author: premium3722               #"
 echo "#####################################"
 
 
+
 ########Variablen zum anpassen! #########
 # Definiere den Pfad zur CSV-Datei
-$csvPath = "C:\TEMP\DEMO.CSV"
+$csvPath = "C:\Temp\UserExport.CSV"
 # Definiere das Trennzeichen für die CSV-Datei
 $csvDelimiter = ';'
+# Optional: Definiere die OU, in der gesucht werden soll (leer lassen, um im gesamten AD zu suchen)
+$searchBaseOU = "OU=EmployeeAccounts,OU=Standort,OU=Kunde,DC=Schweiz,DC=lan"  # Beispiel für eine OU
+#$searchBaseOU = $null  # Wenn du im gesamten AD suchen willst
 
 #######Default Variablen #############
-$LogfilePath = "C:\Windows\Temp\rmm\logs"
-$Logfile = "C:\Windows\Temp\rmm\logs\logfile.html"
+$LogfilePath = "C:\Temp\"
+$Logfile = "C:\Temp\logfile.html"
 $start_time = Get-Date
 
 # Aktivieren des Debug-Modus (true oder false)
 $debugMode = $false
-$debugModefirst3Rows = $true
+$debugModefirst3Rows = $false
 
 ############################################
 
@@ -57,8 +61,8 @@ else
 
 # Wenn der Debug-Modus aktiviert ist, nur die ersten 3 Zeilen nehmen
 if ($debugModefirst3Rows) {
-    Write-Host "Im Debug-Modus: Verarbeite nur die ersten 3 Zeilen."
-     WriteLog "Im Debug-Modus: Verarbeite nur die ersten 3 Zeilen." -ForegroundColor Yellow
+    Write-Host "Im Debug-Modus: Verarbeite nur die ersten 3 Zeilen." -ForegroundColor Magenta
+     WriteLog "Im Debug-Modus: Verarbeite nur die ersten 3 Zeilen." -ForegroundColor Magenta
     $csvData = $csvData | Select-Object -First 3
 }
 
@@ -66,7 +70,7 @@ if ($debugModefirst3Rows) {
 foreach ($user in $csvData) {
     # Debugging: Ausgabe des gesamten Benutzerdatensatzes
     Write-Host "Verarbeite Benutzer: $($user | Format-Table -AutoSize | Out-String)"
-    WriteLog "Verarbeite Benutzer: $($user | Format-Table -AutoSize | Out-String)" -ForegroundColor Black
+    WriteLog "Verarbeite Benutzer: $($user.DisplayName)" -ForegroundColor Black
 
     # Hol den UserPrincipalName aus der CSV-Datei
     $userPrincipalName = $user.UserPrincipalName
@@ -79,8 +83,21 @@ foreach ($user in $csvData) {
         continue
     }
 
-    # Suche den Benutzer im Active Directory
-    $adUser = Get-ADUser -Filter { UserPrincipalName -eq $userPrincipalName } -Properties proxyAddresses
+    # Suchfilter für den Benutzer
+    $filter = { UserPrincipalName -eq $userPrincipalName }
+
+    # Suche den Benutzer im Active Directory, optional mit einer OU
+    if ($searchBaseOU) 
+    {
+        Write-Host "Suche nur in $searchBaseOU"
+        WriteLog "Suche nur in $searchBaseOU"
+        $adUser = Get-ADUser -Filter $filter -Properties proxyAddresses -SearchBase $searchBaseOU
+        
+    } else {
+        Write-Host "Suche in ganzem AD" 
+        WriteLog "Suche in ganzem AD"
+        $adUser = Get-ADUser -Filter $filter -Properties proxyAddresses
+    }
 
     # Überprüfe, ob der Benutzer gefunden wurde
     if ($adUser) {
@@ -104,7 +121,8 @@ foreach ($user in $csvData) {
         # Wenn Adressen hinzugefügt werden müssen
         if ($addressesToAdd.Count -gt 0) {
             if ($debugMode) {
-                Write-Host "Im Debug-Modus: Die folgenden Adressen würden für $userPrincipalName hinzugefügt: $($addressesToAdd -join ', ')"
+                Write-Host "Im Debug-Modus: Die folgenden Adressen würden für $userPrincipalName hinzugefügt: $($addressesToAdd -join ', ')" -ForegroundColor Magenta
+                WriteLog "Im Debug-Modus: Die folgenden Adressen würden für $userPrincipalName hinzugefügt: $($addressesToAdd -join ', ')" -ForegroundColor Magenta
             } else {
                 # Füge die neuen Adressen als String hinzu (nicht als PSObject)
                 Set-ADUser -Identity $adUser -Add @{proxyAddresses = $addressesToAdd}
@@ -123,6 +141,7 @@ foreach ($user in $csvData) {
         # Auch Benutzer, die nicht gefunden wurden, zur Liste "keine Änderungen" hinzufügen
         $noChanges += $userPrincipalName
     }
+    WriteLog " "
 }
 
 # Übersicht am Ende anzeigen
@@ -130,9 +149,8 @@ Write-Host "`n===== Zusammenfassung ====="
 Write-Host "`nBenutzer, bei denen Proxy-Adressen hinzugefügt wurden:"
 WriteLog "`nBenutzer, bei denen Proxy-Adressen hinzugefügt wurden:"
 $addedAddresses | ForEach-Object { Write-Host $_ }
-WriteLog "$addedAddresses | ForEach-Object { Write-Host $_ }"
-
+WriteLog "$addedAddresses"
 Write-Host "`nBenutzer, bei denen keine Änderungen vorgenommen wurden:"
 WriteLog "`nBenutzer, bei denen keine Änderungen vorgenommen wurden:"
 $noChanges | ForEach-Object { Write-Host $_ }
-WriteLog "$noChanges | ForEach-Object { Write-Host $_ }"
+WriteLog "$noChanges"
